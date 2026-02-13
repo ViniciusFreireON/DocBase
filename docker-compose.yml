@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: docbase-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: docbase
+      POSTGRES_PASSWORD: docbase
+      POSTGRES_DB: docbase
+    ports:
+      - "15432:5432"
+    volumes:
+      - docbase_pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docbase -d docbase"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  docbase_pgdata:

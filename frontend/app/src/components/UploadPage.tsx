@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Icon } from './Icon';
 import ReactMarkdown from 'react-markdown';
@@ -14,8 +14,20 @@ import './UploadPage.css';
 
 const ACCEPTED_TYPES = ['.md', '.txt', '.pdf'];
 const MAX_SIZE_MB = 5;
+const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
 type SortBy = 'date' | 'name' | 'type' | 'size';
+
+function getFileExt(file: File): string {
+  const parts = file.name.split('.');
+  return parts.length > 1 ? '.' + parts.pop()!.toLowerCase() : '';
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function readFileAsText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -45,6 +57,9 @@ export function UploadPage() {
   const [busca, setBusca] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedCount, setSelectedCount] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const loadUploads = useCallback(() => {
     setUploads(getUploads());
@@ -85,31 +100,43 @@ export function UploadPage() {
     e.stopPropagation();
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      const input = document.querySelector('.upload-page__input') as HTMLInputElement;
-      if (input) {
-        const dt = new DataTransfer();
-        files.forEach((f) => dt.items.add(f));
-        input.files = dt.files;
-      }
+    if (files.length > 0 && inputRef.current) {
+      const dt = new DataTransfer();
+      files.forEach((f) => dt.items.add(f));
+      inputRef.current.files = dt.files;
+      setSelectedCount(files.length);
+      setErro('');
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    setSelectedCount(files.length);
+    setErro('');
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErro('');
     setSucesso(false);
-    const input = (e.target as HTMLFormElement).querySelector('input[type="file"]') as HTMLInputElement;
-    const files = input?.files ? Array.from(input.files) : [];
+    const files = inputRef.current?.files ? Array.from(inputRef.current.files) : [];
     if (files.length === 0) {
       setErro('Selecione um ou mais arquivos.');
       return;
     }
+    setIsUploading(true);
     let okCount = 0;
+    const rejected: string[] = [];
     for (const file of files) {
-      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-      if (!ACCEPTED_TYPES.includes(ext)) continue;
-      if (file.size > MAX_SIZE_MB * 1024 * 1024) continue;
+      const ext = getFileExt(file);
+      if (!ACCEPTED_TYPES.includes(ext)) {
+        rejected.push(`${file.name}: tipo não suportado`);
+        continue;
+      }
+      if (file.size > MAX_SIZE_BYTES) {
+        rejected.push(`${file.name}: excede ${MAX_SIZE_MB} MB`);
+        continue;
+      }
       try {
         const content =
           ext === '.pdf'
@@ -126,17 +153,21 @@ export function UploadPage() {
         saveUpload(uploaded);
         okCount++;
       } catch {
-        /* skip */
+        rejected.push(`${file.name}: erro ao ler`);
       }
     }
+    setIsUploading(false);
     loadUploads();
+    setSelectedCount(0);
+    if (inputRef.current) inputRef.current.value = '';
     if (okCount > 0) setSucesso(true);
-    if (okCount < files.length) {
+    if (rejected.length > 0) {
       setErro(okCount > 0
-        ? `${files.length - okCount} arquivo(s) ignorado(s) (tipo ou tamanho inválido).`
-        : 'Nenhum arquivo válido. Use .md, .txt ou .pdf até 5 MB.');
+        ? `${rejected.length} ignorado(s): ${rejected.slice(0, 3).join('; ')}${rejected.length > 3 ? '...' : ''}`
+        : rejected.length <= 2
+          ? rejected.join('. ')
+          : `${rejected.length} arquivos inválidos. Use .md, .txt ou .pdf até ${MAX_SIZE_MB} MB.`);
     }
-    if (input) input.value = '';
   };
 
   const handleDelete = (id: string) => {
@@ -146,51 +177,106 @@ export function UploadPage() {
     }
   };
 
+  const totalSize = useMemo(() =>
+    uploads.reduce((acc, u) => acc + u.size, 0),
+    [uploads]
+  );
+
+  const getTypeBadgeClass = (type: string) => {
+    if (type === '.pdf') return 'upload-page__card-badge--pdf';
+    if (type === '.md') return 'upload-page__card-badge--md';
+    return '';
+  };
+
   return (
-    <div className="upload-page">
+    <div className="upload-page app">
       <div className="upload-page__inner">
         <nav className="upload-page__breadcrumb" aria-label="Navegação">
           <Link to="/">Início</Link>
           <span className="upload-page__breadcrumb-sep">›</span>
           <span>Enviar arquivos</span>
         </nav>
+        <div className="upload-page__stats">
+          <div className="upload-page__stat">
+            <span className="upload-page__stat-value">{uploads.length}</span>
+            <span className="upload-page__stat-label">Arquivos</span>
+          </div>
+          <div className="upload-page__stat">
+            <span className="upload-page__stat-value">{formatSize(totalSize)}</span>
+            <span className="upload-page__stat-label">Total</span>
+          </div>
+        </div>
         <header className="upload-page__header">
           <h1 className="upload-page__title">Enviar arquivos</h1>
           <p className="upload-page__subtitle">
-            Envie arquivos .md, .txt ou .pdf para salvar na plataforma.
+            Arraste ou selecione arquivos .md, .txt ou .pdf para salvar no navegador.
           </p>
         </header>
 
         <form onSubmit={handleSubmit} className="upload-page__form">
           <div
-            className={`upload-page__drop ${isDragging ? 'upload-page__drop--active' : ''}`}
+            className={`upload-page__drop ${isDragging ? 'upload-page__drop--active' : ''} ${selectedCount > 0 ? 'upload-page__drop--has-files' : ''}`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
             <input
+              ref={inputRef}
               type="file"
               accept=".md,.txt,.pdf"
               className="upload-page__input"
-              onChange={() => setErro('')}
+              onChange={handleFileSelect}
               multiple
+              aria-label="Selecionar arquivos"
             />
+            <div className="upload-page__drop-icon">
+              <Icon name="cloud_upload" className="upload-page__drop-icon-svg" aria-hidden />
+            </div>
             <span className="upload-page__drop-text">
-              {isDragging ? 'Solte os arquivos aqui' : 'Arraste arquivos aqui ou clique para selecionar'}
+              {isDragging
+                ? 'Solte os arquivos aqui'
+                : selectedCount > 0
+                  ? `${selectedCount} arquivo(s) selecionado(s)`
+                  : 'Arraste arquivos ou clique para selecionar'}
             </span>
-            <span className="upload-page__drop-hint">.md, .txt ou .pdf (até {MAX_SIZE_MB} MB cada)</span>
+            <span className="upload-page__drop-hint">
+              .md, .txt ou .pdf · até {MAX_SIZE_MB} MB por arquivo
+            </span>
           </div>
-          {erro && <p className="upload-page__erro">{erro}</p>}
-          {sucesso && <p className="upload-page__sucesso">Arquivo enviado com sucesso!</p>}
-          <button type="submit" className="upload-page__btn">
-            Salvar arquivo
+          {erro && (
+            <div className="upload-page__message upload-page__message--erro" role="alert">
+              <Icon name="error" className="icon--sm" aria-hidden />
+              {erro}
+            </div>
+          )}
+          {sucesso && (
+            <div className="upload-page__message upload-page__message--sucesso" role="status">
+              <Icon name="check_circle" className="icon--sm" aria-hidden />
+              Arquivo(s) enviado(s) com sucesso!
+            </div>
+          )}
+          <button
+            type="submit"
+            className="upload-page__btn"
+            disabled={isUploading || selectedCount === 0}
+          >
+            {isUploading ? (
+              <>
+                <span className="upload-page__btn-spinner" aria-hidden />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Icon name="upload_file" className="icon--sm" aria-hidden />
+                Enviar arquivo{selectedCount !== 1 ? 's' : ''}
+              </>
+            )}
           </button>
         </form>
 
         <section className="upload-page__list">
-          <div className="upload-page__list-header">
-            <h2 className="upload-page__list-title">Meus arquivos ({uploads.length})</h2>
-            <div className="upload-page__list-controls">
+          <div className="upload-page__toolbar">
+            <div className="upload-page__toolbar-filters">
               <input
                 type="search"
                 placeholder="Buscar por nome..."
@@ -211,34 +297,58 @@ export function UploadPage() {
                 <option value="size">Tamanho</option>
               </select>
             </div>
+            <span className="upload-page__count">{uploads.length} arquivos</span>
           </div>
           {filteredAndSorted.length === 0 ? (
-            <p className="upload-page__empty">
-              {uploads.length === 0
-                ? 'Nenhum arquivo enviado ainda.'
-                : 'Nenhum arquivo corresponde à busca.'}
-            </p>
+            <div className="upload-page__empty">
+              <Icon name="folder_open" className="upload-page__empty-icon" aria-hidden />
+              <p>
+                {uploads.length === 0
+                  ? 'Nenhum arquivo enviado ainda.'
+                  : 'Nenhum arquivo corresponde à busca.'}
+              </p>
+            </div>
           ) : (
-            <ul className="upload-page__items">
+            <div className="upload-page__grid">
               {filteredAndSorted.map((u) => (
-                <li key={u.id} className="upload-page__item">
-                  <Link to={`/upload/${u.id}`} className="upload-page__item-link">
-                    <span className="upload-page__item-name">{u.name}</span>
-                    <span className="upload-page__item-meta">
-                      {u.type} · {(u.size / 1024).toFixed(1)} KB
+                <article key={u.id} className="upload-page__card">
+                  <Link to={`/upload/${u.id}`} className="upload-page__card-link">
+                    <div className="upload-page__card-header">
+                      <span className="upload-page__card-icon">
+                        <Icon
+                          name={u.type === '.pdf' ? 'picture_as_pdf' : u.type === '.md' ? 'description' : 'text_snippet'}
+                          className="icon--sm"
+                          aria-hidden
+                        />
+                      </span>
+                      <h3 className="upload-page__card-title">{u.name}</h3>
+                      <span className={`upload-page__card-badge ${getTypeBadgeClass(u.type)}`}>
+                        {u.type.toUpperCase().slice(1)}
+                      </span>
+                    </div>
+                    <span className="upload-page__card-meta">
+                      {formatSize(u.size)} · {new Date(u.uploadedAt).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
                     </span>
                   </Link>
                   <button
                     type="button"
-                    className="upload-page__item-del"
-                    onClick={() => handleDelete(u.id)}
+                    className="upload-page__card-del"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleDelete(u.id);
+                    }}
+                    title="Excluir"
                     aria-label="Excluir"
                   >
-                    <Icon name="close" className="icon--sm" aria-hidden />
+                    <Icon name="delete" className="icon--sm" aria-hidden />
                   </button>
-                </li>
+                </article>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       </div>
