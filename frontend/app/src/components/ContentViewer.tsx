@@ -12,6 +12,7 @@ import { useActiveSection } from '../hooks/useActiveSection';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import { documents } from '../data/documents';
 import { exportToPdf } from '../utils/exportPdf';
+import { Icon } from './Icon';
 import './ContentViewer.css';
 
 function SectionHeading({
@@ -69,10 +70,7 @@ function SectionHeading({
           aria-expanded={isDropdownOpen}
           aria-haspopup="true"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </svg>
+          <Icon name="content_copy" className="icon--sm" aria-hidden />
         </button>
         {isDropdownOpen && (
           <div className="content-viewer__section-copy-dropdown" role="menu">
@@ -253,7 +251,7 @@ export function ContentViewer() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        navigate('/');
+        navigate('/docs');
       }
     };
     window.addEventListener('keydown', handler);
@@ -304,7 +302,7 @@ export function ContentViewer() {
                       }}
                       aria-label={isCollapsed ? 'Expandir' : 'Recolher'}
                     >
-                      {isCollapsed ? '▶' : '▼'}
+                      <Icon name={isCollapsed ? 'chevron_right' : 'expand_more'} className="icon--sm" aria-hidden />
                     </button>
                   )}
                   <button
@@ -370,10 +368,10 @@ export function ContentViewer() {
                 <button
                   type="button"
                   className="content-viewer__back"
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/docs')}
                   aria-label="Voltar"
                 >
-                  <span className="content-viewer__back-icon">←</span>
+                  <Icon name="arrow_back" className="content-viewer__back-icon icon--sm" aria-hidden />
                   Voltar
                 </button>
                 <span className="content-viewer__filename" title={filename}>
@@ -389,7 +387,7 @@ export function ContentViewer() {
                   tabIndex={0}
                   aria-label="Buscar documentos (⌘K ou /)"
                 >
-                  <span className="content-viewer__search-icon">⌘</span>
+                  <Icon name="search" className="content-viewer__search-icon icon--sm" aria-hidden />
                   <span className="content-viewer__search-placeholder">Buscar</span>
                   <span className="content-viewer__search-shortcut">/</span>
                 </div>
@@ -421,7 +419,7 @@ export function ContentViewer() {
                       aria-label="Baixar arquivo"
                       title="Baixar arquivo"
                     >
-                      <span className="content-viewer__download-icon">↓</span>
+                      <Icon name="download" className="content-viewer__download-icon icon--sm" aria-hidden />
                       Baixar
                     </button>
                   </div>
@@ -438,9 +436,9 @@ export function ContentViewer() {
 
             {error && (
               <div className="content-viewer__error">
-                <span className="content-viewer__error-icon" aria-hidden>⚠</span>
+                <Icon name="warning" className="content-viewer__error-icon" aria-hidden />
                 <p>{error}</p>
-                <button type="button" className="content-viewer__error-btn" onClick={() => navigate('/')}>
+                <button type="button" className="content-viewer__error-btn" onClick={() => navigate('/docs')}>
                   Voltar ao início
                 </button>
               </div>

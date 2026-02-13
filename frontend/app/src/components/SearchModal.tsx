@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Icon } from './Icon';
 import type { DocumentItem } from '../types/document';
 import { DOCUMENT_TYPE_LABELS, CATEGORY_LABELS } from '../types/document';
 import './SearchModal.css';
@@ -90,7 +91,7 @@ export function SearchModal({ isOpen, onClose, documents }: SearchModalProps) {
         aria-label="Buscar documentos"
       >
         <div className="search-modal__input-wrap">
-          <span className="search-modal__icon" aria-hidden>⌘K</span>
+          <Icon name="search" className="search-modal__icon" aria-hidden />
           <input
             ref={inputRef}
             type="search"

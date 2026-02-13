@@ -83,6 +83,12 @@ a {
     color: #111;
   }
 
+  .sidebar,
+  .sidebar__toggle--mobile,
+  .main-with-sidebar {
+    margin-left: 0 !important;
+  }
+
   .search-modal-overlay,
   .drawer-overlay,
   .app__hamburger,

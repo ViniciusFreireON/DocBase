@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Icon } from './Icon';
 import type { DocumentItem, DocumentType, DocumentCategory } from '../types/document';
 import { DOCUMENT_TYPE_LABELS, CATEGORY_LABELS } from '../types/document';
 import './HomeIndex.css';
@@ -62,7 +63,7 @@ export function HomeIndex({ documents, typeFilter, categoryFilter, onNavigate }:
           onClick={() => toggleType(type)}
           aria-expanded={!typeCollapsed}
         >
-          <span className="home-index__type-chevron">{typeCollapsed ? '▶' : '▼'}</span>
+          <Icon name={typeCollapsed ? 'chevron_right' : 'expand_more'} className="home-index__type-chevron icon--sm" aria-hidden />
           {DOCUMENT_TYPE_LABELS[type]}
         </button>
         {!typeCollapsed && (
@@ -78,7 +79,7 @@ export function HomeIndex({ documents, typeFilter, categoryFilter, onNavigate }:
                     onClick={() => toggleCategory(catKey)}
                     aria-expanded={!catCollapsed}
                   >
-                    <span className="home-index__cat-chevron">{catCollapsed ? '▶' : '▼'}</span>
+                    <Icon name={catCollapsed ? 'chevron_right' : 'expand_more'} className="home-index__cat-chevron icon--sm" aria-hidden />
                     {CATEGORY_LABELS[category]}
                   </button>
                   {!catCollapsed && (

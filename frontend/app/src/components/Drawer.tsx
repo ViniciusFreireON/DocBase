@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Icon } from './Icon';
 import './Drawer.css';
 
 interface DrawerProps {
@@ -54,7 +55,7 @@ export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
             onClick={onClose}
             aria-label="Fechar"
           >
-            ✕
+            <Icon name="close" aria-hidden />
           </button>
         </header>
         <div className="drawer__content">{children}</div>

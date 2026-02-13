@@ -7,10 +7,17 @@ import { Filters } from './components/Filters';
 import { Section } from './components/Section';
 import { HomeIndex } from './components/HomeIndex';
 import { ContentViewer } from './components/ContentViewer';
+import { HomePage } from './components/HomePage';
+import { LoginPage } from './components/LoginPage';
+import { CadastroPage } from './components/CadastroPage';
+import { UploadPage, UploadViewerPage } from './components/UploadPage';
+import { NotesPage, NoteEditorPage } from './components/NotesPage';
+import { Sidebar } from './components/Sidebar';
 import { Drawer } from './components/Drawer';
 import { useSearch } from './contexts/SearchContext';
 import { downloadAllDocuments } from './utils/downloadAll';
 import { useRecentlyViewed } from './hooks/useRecentlyViewed';
+import { Icon } from './components/Icon';
 import './App.css';
 
 type TypeFilter = DocumentType | 'all';
@@ -48,6 +55,25 @@ function Home() {
 
   return (
     <div className="app">
+      <nav className="app__breadcrumb" aria-label="Navegação">
+        <Link to="/">Início</Link>
+        <span className="app__breadcrumb-sep">›</span>
+        <span>Documentos</span>
+      </nav>
+      <div className="app__stats">
+        <div className="app__stat">
+          <span className="app__stat-value">{totalDocs}</span>
+          <span className="app__stat-label">Total</span>
+        </div>
+        <div className="app__stat">
+          <span className="app__stat-value">{htmlCssCount}</span>
+          <span className="app__stat-label">HTML/CSS</span>
+        </div>
+        <div className="app__stat">
+          <span className="app__stat-value">{jsCount}</span>
+          <span className="app__stat-label">JavaScript</span>
+        </div>
+      </div>
       <button
         type="button"
         className="app__hamburger"
@@ -68,7 +94,7 @@ function Home() {
       </Drawer>
       <div className="app__body">
         <div className="app__content">
-          <Header />
+          <Header showHomeLink />
           <div className="app__toolbar">
             <div className="app__toolbar-filters">
               <Filters
@@ -87,7 +113,7 @@ function Home() {
                 tabIndex={0}
                 aria-label="Buscar documentos (⌘K ou /)"
               >
-                <span className="app__search-icon">⌘</span>
+                <Icon name="search" className="app__search-icon" aria-hidden />
                 <span className="app__search-placeholder">Buscar documentos</span>
                 <span className="app__search-shortcut">/</span>
               </div>
@@ -101,7 +127,7 @@ function Home() {
                 disabled={downloading}
                 title="Baixar todos os arquivos em ZIP"
               >
-                {downloading ? 'Gerando...' : '↓ Baixar todos'}
+                {downloading ? 'Gerando...' : <><Icon name="download" className="icon--sm" aria-hidden /> Baixar todos</>}
               </button>
             </div>
           </div>
@@ -144,10 +170,22 @@ function Home() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/content/*" element={<ContentViewer />} />
-    </Routes>
+    <>
+      <Sidebar />
+      <main className="main-with-sidebar">
+        <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/docs" element={<Home />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/cadastro" element={<CadastroPage />} />
+        <Route path="/upload" element={<UploadPage />} />
+        <Route path="/upload/:id" element={<UploadViewerPage />} />
+        <Route path="/notas" element={<NotesPage />} />
+        <Route path="/notas/:id" element={<NoteEditorPage />} />
+        <Route path="/content/*" element={<ContentViewer />} />
+        </Routes>
+      </main>
+    </>
   );
 }
 
