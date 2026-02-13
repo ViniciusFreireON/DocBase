@@ -1,0 +1,9 @@
+{
+  "name": "corre-o-slides-aula-flex",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix app",
+    "build": "npm install --prefix app && npm run build --prefix app",
+    "preview": "npm run preview --prefix app"
+  }
+}

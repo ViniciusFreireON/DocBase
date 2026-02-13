@@ -1,0 +1,9 @@
+{
+  "name": "docbase",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix \"html e css\"",
+    "build": "npm run build --prefix \"html e css\"",
+    "preview": "npm run preview --prefix \"html e css\""
+  }
+}
