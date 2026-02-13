@@ -269,8 +269,8 @@
 }
 
 .notes-page__card-btn {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -407,6 +407,33 @@
   border-color: var(--color-accent-html);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
+
+.notes-page__mdx-editor-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  min-height: 450px;
+}
+
+.notes-page__mdx-editor-wrap .mdxeditor {
+  background: var(--color-surface) !important;
+}
+
+.notes-page__mdx-editor-wrap .mdxeditor-toolbar {
+  background: var(--color-surface-hover) !important;
+  border-color: var(--color-border) !important;
+}
+
+.notes-page__mdx-editor-wrap .mdxeditor-root-contenteditable {
+  background: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+}
+
+.notes-page__mdx-editor-wrap .mdxeditor-root-contenteditable h1 { font-size: 1.75rem; }
+.notes-page__mdx-editor-wrap .mdxeditor-root-contenteditable h2 { font-size: 1.5rem; }
+.notes-page__mdx-editor-wrap .mdxeditor-root-contenteditable h3 { font-size: 1.25rem; }
 
 @media (max-width: 640px) {
   .notes-page {

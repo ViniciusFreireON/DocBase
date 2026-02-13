@@ -2,6 +2,27 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNoteMiniPlayer } from '../contexts/NoteMiniPlayerContext';
 import { getNoteById, saveNote } from '../utils/storage';
 import { Icon } from './Icon';
+import {
+  MDXEditor,
+  type MDXEditorMethods,
+  headingsPlugin,
+  listsPlugin,
+  quotePlugin,
+  thematicBreakPlugin,
+  markdownShortcutPlugin,
+  linkPlugin,
+  linkDialogPlugin,
+  codeBlockPlugin,
+  toolbarPlugin,
+  BoldItalicUnderlineToggles,
+  BlockTypeSelect,
+  UndoRedo,
+  CreateLink,
+  InsertCodeBlock,
+  ListsToggle,
+  Separator,
+} from '@mdxeditor/editor';
+import '@mdxeditor/editor/style.css';
 import './NoteMiniPlayer.css';
 
 const MIN_WIDTH = 280;
@@ -18,6 +39,7 @@ export function NoteMiniPlayer() {
   const [content, setContent] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const editorRef = useRef<MDXEditorMethods | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; posX: number; posY: number } | null>(null);
   const resizeRef = useRef<{ startX: number; startY: number; width: number; height: number } | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,10 +55,12 @@ export function NoteMiniPlayer() {
 
   const persistNote = useCallback(() => {
     if (!currentNote) return;
+    const md = editorRef.current?.getMarkdown?.();
+    const finalContent = typeof md === 'string' ? md : content;
     saveNote({
       ...currentNote,
       title: title.trim() || '(Sem titulo)',
-      content: content.trim(),
+      content: finalContent.trim(),
       updatedAt: new Date().toISOString(),
     });
   }, [currentNote, title, content]);
@@ -182,16 +206,41 @@ export function NoteMiniPlayer() {
           </button>
         </div>
       </div>
-      <div className="note-mini-player__content">
-        <textarea
-          className="note-mini-player__textarea"
-          value={content}
-          onChange={(e) => handleContentChange(e.target.value)}
-          placeholder="Escreva sua nota..."
-          spellCheck={false}
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-        />
+      <div className="note-mini-player__content" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+        <div className="note-mini-player__mdx-editor-wrap">
+          <MDXEditor
+            ref={editorRef}
+            key={currentNote?.id}
+            markdown={content}
+            onChange={(md) => handleContentChange(md ?? '')}
+            className="dark-theme"
+            plugins={[
+              headingsPlugin(),
+              listsPlugin(),
+              quotePlugin(),
+              thematicBreakPlugin(),
+              markdownShortcutPlugin(),
+              linkPlugin(),
+              linkDialogPlugin(),
+              codeBlockPlugin(),
+              toolbarPlugin({
+                toolbarContents: () => (
+                  <>
+                    <UndoRedo />
+                    <Separator />
+                    <BoldItalicUnderlineToggles />
+                    <Separator />
+                    <BlockTypeSelect />
+                    <ListsToggle />
+                    <Separator />
+                    <CreateLink />
+                    <InsertCodeBlock />
+                  </>
+                ),
+              }),
+            ]}
+          />
+        </div>
       </div>
       {!isFullscreen && (
         <div

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Icon } from './Icon';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
@@ -9,6 +9,27 @@ import {
   type Note,
 } from '../utils/storage';
 import { useNoteMiniPlayer } from '../contexts/NoteMiniPlayerContext';
+import {
+  MDXEditor,
+  type MDXEditorMethods,
+  headingsPlugin,
+  listsPlugin,
+  quotePlugin,
+  thematicBreakPlugin,
+  markdownShortcutPlugin,
+  linkPlugin,
+  linkDialogPlugin,
+  codeBlockPlugin,
+  toolbarPlugin,
+  BoldItalicUnderlineToggles,
+  BlockTypeSelect,
+  UndoRedo,
+  CreateLink,
+  InsertCodeBlock,
+  ListsToggle,
+  Separator,
+} from '@mdxeditor/editor';
+import '@mdxeditor/editor/style.css';
 import './NotesPage.css';
 
 type SortBy = 'date' | 'title';
@@ -177,6 +198,7 @@ export function NoteEditorPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [salvo, setSalvo] = useState(false);
+  const editorRef = useRef<MDXEditorMethods | null>(null);
 
   const isNew = id === 'nova';
 
@@ -195,10 +217,12 @@ export function NoteEditorPage() {
 
   const handleSave = useCallback(() => {
     if (!note) return;
+    const md = editorRef.current?.getMarkdown?.();
+    const finalContent = typeof md === 'string' ? md : content;
     const updated: Note = {
       ...note,
       title: title.trim() || '(Sem titulo)',
-      content: content.trim(),
+      content: finalContent.trim(),
       updatedAt: new Date().toISOString(),
     };
     saveNote(updated);
@@ -304,13 +328,40 @@ export function NoteEditorPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
-          <textarea
-            className="notes-page__textarea"
-            placeholder="Escreva sua nota aqui... (Ctrl+S para salvar)"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={20}
-          />
+          <div className="notes-page__mdx-editor-wrap">
+            <MDXEditor
+              ref={editorRef}
+              key={note?.id ?? 'new'}
+              markdown={content}
+              onChange={setContent}
+              className="dark-theme"
+              plugins={[
+                headingsPlugin(),
+                listsPlugin(),
+                quotePlugin(),
+                thematicBreakPlugin(),
+                markdownShortcutPlugin(),
+                linkPlugin(),
+                linkDialogPlugin(),
+                codeBlockPlugin(),
+                toolbarPlugin({
+                  toolbarContents: () => (
+                    <>
+                      <UndoRedo />
+                      <Separator />
+                      <BoldItalicUnderlineToggles />
+                      <Separator />
+                      <BlockTypeSelect />
+                      <ListsToggle />
+                      <Separator />
+                      <CreateLink />
+                      <InsertCodeBlock />
+                    </>
+                  ),
+                }),
+              ]}
+            />
+          </div>
         </div>
       </div>
     </div>

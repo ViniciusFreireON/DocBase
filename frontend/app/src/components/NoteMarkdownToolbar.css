@@ -1,0 +1,45 @@
+.note-md-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-hover);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.note-md-toolbar__btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.note-md-toolbar__btn:hover:not(:disabled) {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.note-md-toolbar__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.note-md-toolbar__text {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.note-md-toolbar__sep {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+  margin: 0 0.25rem;
+}

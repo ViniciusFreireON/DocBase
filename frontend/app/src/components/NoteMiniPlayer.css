@@ -74,8 +74,8 @@
 }
 
 .note-mini-player__btn {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,31 +96,28 @@
 .note-mini-player__content {
   flex: 1;
   overflow: hidden;
-  padding: 0.75rem 1rem;
   min-height: 60px;
   display: flex;
+  flex-direction: column;
 }
 
-.note-mini-player__textarea {
+.note-mini-player__mdx-editor-wrap {
   flex: 1;
-  width: 100%;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.note-mini-player__mdx-editor-wrap .mdxeditor {
+  flex: 1;
   min-height: 0;
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--color-text);
-  background: transparent;
-  border: none;
-  resize: none;
-  padding: 0;
+  background: transparent !important;
 }
 
-.note-mini-player__textarea:focus {
-  outline: none;
-}
-
-.note-mini-player__textarea::placeholder {
-  color: var(--color-text-muted);
+.note-mini-player__mdx-editor-wrap .mdxeditor-root-contenteditable,
+.note-mini-player__mdx-editor-wrap [contenteditable] {
+  color: var(--color-text) !important;
+  font-size: 0.9375rem;
 }
 
 .note-mini-player__resize-handle {
