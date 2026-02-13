@@ -12,6 +12,7 @@ import { LoginPage } from './components/LoginPage';
 import { CadastroPage } from './components/CadastroPage';
 import { UploadPage, UploadViewerPage } from './components/UploadPage';
 import { NotesPage, NoteEditorPage } from './components/NotesPage';
+import { NoteMiniPlayer } from './components/NoteMiniPlayer';
 import { Sidebar } from './components/Sidebar';
 import { Drawer } from './components/Drawer';
 import { useSearch } from './contexts/SearchContext';
@@ -171,6 +172,7 @@ function Home() {
 function App() {
   return (
     <>
+      <NoteMiniPlayer />
       <Sidebar />
       <main className="main-with-sidebar">
         <Routes>

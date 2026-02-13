@@ -8,6 +8,7 @@ import {
   getNoteById,
   type Note,
 } from '../utils/storage';
+import { useNoteMiniPlayer } from '../contexts/NoteMiniPlayerContext';
 import './NotesPage.css';
 
 type SortBy = 'date' | 'title';
@@ -27,6 +28,7 @@ export function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [busca, setBusca] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('date');
+  const { openMiniPlayer, closeMiniPlayer, note: miniPlayerNote } = useNoteMiniPlayer();
 
   const loadNotes = useCallback(() => {
     setNotes(getNotes());
@@ -51,64 +53,75 @@ export function NotesPage() {
   }, [notes, busca, sortBy]);
 
   return (
-    <div className="notes-page">
+    <div className="notes-page app">
       <div className="notes-page__inner">
         <nav className="notes-page__breadcrumb" aria-label="Navegação">
           <Link to="/">Início</Link>
           <span className="notes-page__breadcrumb-sep">›</span>
           <span>Notas</span>
         </nav>
+        <div className="notes-page__stats">
+          <div className="notes-page__stat">
+            <span className="notes-page__stat-value">{notes.length}</span>
+            <span className="notes-page__stat-label">Total</span>
+          </div>
+        </div>
         <header className="notes-page__header">
           <h1 className="notes-page__title">Minhas notas</h1>
           <p className="notes-page__subtitle">
             Crie e edite suas notas. Salvas no seu navegador.
           </p>
-          <Link to="/notas/nova" className="notes-page__btn-new">
-            + Nova nota
-          </Link>
         </header>
-
-        <section className="notes-page__list">
-          <div className="notes-page__list-header">
-            <h2 className="notes-page__list-title">Todas ({notes.length})</h2>
-            <div className="notes-page__list-controls">
-              <input
-                type="search"
-                placeholder="Buscar nas notas..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                className="notes-page__search"
-                aria-label="Buscar notas"
-              />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortBy)}
-                className="notes-page__sort"
-                aria-label="Ordenar por"
-              >
-                <option value="date">Mais recentes</option>
-                <option value="title">Título (A-Z)</option>
-              </select>
-            </div>
+        <div className="notes-page__toolbar">
+          <div className="notes-page__toolbar-filters">
+            <input
+              type="search"
+              placeholder="Buscar nas notas..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="notes-page__search"
+              aria-label="Buscar notas"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              className="notes-page__sort"
+              aria-label="Ordenar por"
+            >
+              <option value="date">Mais recentes</option>
+              <option value="title">Título (A-Z)</option>
+            </select>
           </div>
+          <div className="notes-page__toolbar-actions">
+            <span className="notes-page__count" title="Total de notas">
+              {notes.length} notas
+            </span>
+            <Link to="/notas/nova" className="notes-page__btn-new">
+              <Icon name="add" className="icon--sm" aria-hidden /> Nova nota
+            </Link>
+          </div>
+        </div>
+
+        <section className="notes-page__section">
           {filteredAndSorted.length === 0 ? (
             <p className="notes-page__empty">
               {notes.length === 0 ? 'Nenhuma nota ainda. Crie a primeira!' : 'Nenhuma nota corresponde à busca.'}
             </p>
           ) : (
-            <ul className="notes-page__items">
+            <div className="notes-page__grid">
               {filteredAndSorted.map((n) => (
-                <li key={n.id} className="notes-page__item">
-                  <Link to={`/notas/${n.id}`} className="notes-page__item-link">
-                    <span className="notes-page__item-title">
-                      {n.title || '(Sem titulo)'}
-                    </span>
-                    <span className="notes-page__item-preview">
-                      {n.content.slice(0, 100)}
-                      {n.content.length > 100 ? '...' : ''}
-                    </span>
-                    <span className="notes-page__item-meta">
-                      Atualizada em{' '}
+                <div key={n.id} className="notes-page__card">
+                  <Link to={`/notas/${n.id}`} className="notes-page__card-link">
+                    <div className="notes-page__card-header">
+                      <h3 className="notes-page__card-title">
+                        {n.title || '(Sem titulo)'}
+                      </h3>
+                      <span className="notes-page__card-badge">Nota</span>
+                    </div>
+                    <p className="notes-page__card-preview">
+                      {n.content ? (n.content.slice(0, 120) + (n.content.length > 120 ? '...' : '')) : '(vazio)'}
+                    </p>
+                    <span className="notes-page__card-meta">
                       {new Date(n.updatedAt).toLocaleDateString('pt-BR', {
                         day: '2-digit',
                         month: 'short',
@@ -116,9 +129,39 @@ export function NotesPage() {
                       })}
                     </span>
                   </Link>
-                </li>
+                  <div className="notes-page__card-actions" onClick={(e) => e.preventDefault()}>
+                    <button
+                      type="button"
+                      className="notes-page__card-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMiniPlayer(n);
+                      }}
+                      title="Abrir mini player"
+                      aria-label="Mini player"
+                    >
+                      <Icon name="picture_in_picture" className="icon--sm" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      className="notes-page__card-btn notes-page__card-btn--del"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Excluir esta nota?')) {
+                          deleteNote(n.id);
+                          if (miniPlayerNote?.id === n.id) closeMiniPlayer();
+                          setNotes(getNotes());
+                        }
+                      }}
+                      title="Excluir nota"
+                      aria-label="Excluir"
+                    >
+                      <Icon name="delete" className="icon--sm" aria-hidden />
+                    </button>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       </div>
@@ -129,6 +172,7 @@ export function NotesPage() {
 export function NoteEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { openMiniPlayer } = useNoteMiniPlayer();
   const [note, setNote] = useState<Note | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -213,6 +257,17 @@ export function NoteEditorPage() {
             </button>
             {!isNew && (
               <>
+                <button
+                  type="button"
+                  className="notes-page__btn notes-page__btn--mini"
+                  onClick={() => {
+                    const n = getNoteById(note.id);
+                    if (n) openMiniPlayer(n);
+                  }}
+                  title="Abrir mini player"
+                >
+                  <Icon name="picture_in_picture" className="icon--sm" aria-hidden />
+                </button>
                 <button
                   type="button"
                   className="notes-page__btn notes-page__btn--export"
