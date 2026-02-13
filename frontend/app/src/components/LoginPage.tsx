@@ -1,13 +1,19 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import './AuthPage.css';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro('');
     if (!email.trim()) {
@@ -18,15 +24,22 @@ export function LoginPage() {
       setErro('Digite sua senha.');
       return;
     }
-    // TODO: integrar com backend de autenticação
-    alert('Login em desenvolvimento. Em breve!');
+    setLoading(true);
+    try {
+      await login(email, senha);
+      navigate(from, { replace: true });
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao fazer login.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="auth-page">
       <div className="auth-page__card">
         <h1 className="auth-page__title">Entrar</h1>
-        <p className="auth-page__subtitle">Acesse sua conta DocBase</p>
+        <p className="auth-page__subtitle">Acesse o DocBase como administrador</p>
 
         <form onSubmit={handleSubmit} className="auth-page__form">
           {erro && <p className="auth-page__erro">{erro}</p>}
@@ -37,8 +50,8 @@ export function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
               autoComplete="email"
+              disabled={loading}
             />
           </div>
           <div className="auth-page__field">
@@ -48,17 +61,17 @@ export function LoginPage() {
               type="password"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              placeholder="••••••••"
               autoComplete="current-password"
+              disabled={loading}
             />
           </div>
-          <button type="submit" className="auth-page__btn">
-            Entrar
+          <button type="submit" className="auth-page__btn" disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
 
         <p className="auth-page__footer">
-          Não tem conta? <Link to="/cadastro">Cadastre-se</Link>
+          DocBase · Acesso restrito a administradores
         </p>
       </div>
     </div>

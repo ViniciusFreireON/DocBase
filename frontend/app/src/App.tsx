@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link, Outlet } from 'react-router-dom';
 import type { DocumentType, DocumentCategory } from './types/document';
 import { documents } from './data/documents';
 import { Header } from './components/Header';
@@ -9,7 +9,6 @@ import { HomeIndex } from './components/HomeIndex';
 import { ContentViewer } from './components/ContentViewer';
 import { HomePage } from './components/HomePage';
 import { LoginPage } from './components/LoginPage';
-import { CadastroPage } from './components/CadastroPage';
 import { UploadPage, UploadViewerPage } from './components/UploadPage';
 import { NotesPage, NoteEditorPage } from './components/NotesPage';
 import { NoteMiniPlayer } from './components/NoteMiniPlayer';
@@ -19,6 +18,8 @@ import { useSearch } from './contexts/SearchContext';
 import { downloadAllDocuments } from './utils/downloadAll';
 import { useRecentlyViewed } from './hooks/useRecentlyViewed';
 import { Icon } from './components/Icon';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { Nav } from './components/Nav';
 import './App.css';
 
 type TypeFilter = DocumentType | 'all';
@@ -169,24 +170,34 @@ function Home() {
   );
 }
 
-function App() {
+function AppLayout() {
   return (
     <>
       <NoteMiniPlayer />
       <Sidebar />
       <main className="main-with-sidebar">
-        <Routes>
+        <Outlet />
+      </main>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <>
+      <Nav />
+      <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="/" element={<HomePage />} />
         <Route path="/docs" element={<Home />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/cadastro" element={<CadastroPage />} />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/upload/:id" element={<UploadViewerPage />} />
         <Route path="/notas" element={<NotesPage />} />
         <Route path="/notas/:id" element={<NoteEditorPage />} />
         <Route path="/content/*" element={<ContentViewer />} />
-        </Routes>
-      </main>
+      </Route>
+    </Routes>
     </>
   );
 }

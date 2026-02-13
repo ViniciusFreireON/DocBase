@@ -3,11 +3,18 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { getUploads } from '../utils/storage';
 import { getNotes } from '../utils/storage';
 import { Icon } from './Icon';
+import { useAuth } from '../contexts/AuthContext';
+import { useSidebar } from '../contexts/SidebarContext';
 import './Sidebar.css';
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const sidebarCtx = useSidebar();
+  const collapsed = sidebarCtx?.collapsed ?? false;
+  const toggleCollapsed = sidebarCtx?.toggleCollapsed ?? (() => {});
+  const mobileOpen = sidebarCtx?.mobileOpen ?? false;
+  const setMobileOpen = sidebarCtx?.setMobileOpen ?? (() => {});
+  const toggleMobileOpen = sidebarCtx?.toggleMobileOpen ?? (() => {});
   const [recentUploads, setRecentUploads] = useState<{ id: string; name: string }[]>([]);
   const [recentNotes, setRecentNotes] = useState<{ id: string; title: string }[]>([]);
   const location = useLocation();
@@ -27,14 +34,14 @@ export function Sidebar() {
 
   useEffect(() => {
     setMobileOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, setMobileOpen]);
 
   return (
     <>
       <button
         type="button"
         className="sidebar__toggle sidebar__toggle--mobile"
-        onClick={() => setMobileOpen(!mobileOpen)}
+        onClick={toggleMobileOpen}
         aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
         aria-expanded={mobileOpen}
       >
@@ -52,15 +59,21 @@ export function Sidebar() {
             <Link to="/" className="sidebar__logo">
               DocBase
             </Link>
-            <button
-              type="button"
-              className="sidebar__toggle sidebar__toggle--collapse"
-              onClick={() => setCollapsed(!collapsed)}
-              aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
-              title={collapsed ? 'Expandir' : 'Recolher'}
-            >
-              <Icon name={collapsed ? 'chevron_right' : 'chevron_left'} className="sidebar__chevron icon--sm" />
-            </button>
+            <div className="sidebar__header-actions">
+              <button
+                type="button"
+                className="sidebar__toggle sidebar__toggle--collapse"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleCollapsed();
+                }}
+                aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+                title={collapsed ? 'Expandir' : 'Recolher'}
+              >
+                <Icon name={collapsed ? 'chevron_right' : 'chevron_left'} className="sidebar__chevron icon--sm" />
+              </button>
+            </div>
           </div>
 
           <nav className="sidebar__nav">
@@ -127,14 +140,17 @@ export function Sidebar() {
           </nav>
 
           <div className="sidebar__footer">
-            <Link to="/login" className="sidebar__link sidebar__link--muted">
-              <Icon name="login" className="sidebar__icon" />
-              {!collapsed && <span>Entrar</span>}
-            </Link>
-            <Link to="/cadastro" className="sidebar__link sidebar__link--cta">
-              <Icon name="person_add" className="sidebar__icon" />
-              {!collapsed && <span>Cadastrar</span>}
-            </Link>
+            {user ? (
+              <button
+                type="button"
+                className="sidebar__link sidebar__link--muted"
+                onClick={() => logout()}
+                title="Sair"
+              >
+                <Icon name="logout" className="sidebar__icon" />
+                {!collapsed && <span>Sair</span>}
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -142,10 +158,15 @@ export function Sidebar() {
           <div
             className="sidebar__overlay"
             onClick={() => setMobileOpen(false)}
-            onKeyDown={(e) => e.key === 'Escape' && setMobileOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setMobileOpen(false);
+              }
+            }}
             role="button"
             tabIndex={0}
-            aria-label="Fechar menu"
+            aria-label="Fechar menu (clique fora ou pressione Esc)"
           />
         )}
       </aside>

@@ -190,6 +190,8 @@ export function NotesPage() {
   );
 }
 
+type SavingStatus = 'idle' | 'pending' | 'saving' | 'saved';
+
 export function NoteEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -197,8 +199,10 @@ export function NoteEditorPage() {
   const [note, setNote] = useState<Note | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [salvo, setSalvo] = useState(false);
+  const [savingStatus, setSavingStatus] = useState<SavingStatus>('idle');
   const editorRef = useRef<MDXEditorMethods | null>(null);
+  const isFirstRender = useRef(true);
+  const lastSaved = useRef<{ title: string; content: string } | null>(null);
 
   const isNew = id === 'nova';
 
@@ -213,10 +217,12 @@ export function NoteEditorPage() {
       setTitle(found?.title ?? '');
       setContent(found?.content ?? '');
     }
+    isFirstRender.current = true;
+    lastSaved.current = null;
   }, [id, isNew]);
 
-  const handleSave = useCallback(() => {
-    if (!note) return;
+  const persistNote = useCallback(() => {
+    if (!note) return null;
     const md = editorRef.current?.getMarkdown?.();
     const finalContent = typeof md === 'string' ? md : content;
     const updated: Note = {
@@ -229,23 +235,44 @@ export function NoteEditorPage() {
     setNote(updated);
     setTitle(updated.title);
     setContent(updated.content);
-    setSalvo(true);
-    setTimeout(() => setSalvo(false), 2000);
     if (isNew) {
       navigate(`/notas/${updated.id}`, { replace: true });
     }
+    return updated;
   }, [note, title, content, isNew, navigate]);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      lastSaved.current = { title, content };
+      return;
+    }
+    if (lastSaved.current && lastSaved.current.title === title && lastSaved.current.content === content) {
+      return;
+    }
+    setSavingStatus('pending');
+    const t = setTimeout(() => {
+      setSavingStatus('saving');
+      const updated = persistNote();
+      if (updated) {
+        lastSaved.current = { title: updated.title, content: updated.content };
+      }
+      setSavingStatus('saved');
+      setTimeout(() => setSavingStatus('idle'), 1200);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [title, content, persistNote]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        handleSave();
+        persistNote();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleSave]);
+  }, [persistNote]);
 
   const handleDelete = () => {
     if (!note || !confirm('Excluir esta nota?')) return;
@@ -272,13 +299,17 @@ export function NoteEditorPage() {
             <Icon name="arrow_back" className="icon--sm" aria-hidden /> Voltar
           </Link>
           <div className="notes-page__actions">
-            <button
-              type="button"
-              className="notes-page__btn notes-page__btn--save"
-              onClick={handleSave}
+            <span
+              className={`notes-page__saving ${savingStatus !== 'idle' ? 'notes-page__saving--active' : ''}`}
+              aria-live="polite"
             >
-              {salvo ? 'Salvo!' : 'Salvar'}
-            </button>
+              <span className="notes-page__saving-dot" />
+              {savingStatus === 'pending' || savingStatus === 'saving'
+                ? 'Salvando...'
+                : savingStatus === 'saved'
+                  ? 'Salvo'
+                  : null}
+            </span>
             {!isNew && (
               <>
                 <button

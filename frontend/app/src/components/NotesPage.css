@@ -318,13 +318,37 @@
   transition: background 0.2s, color 0.2s;
 }
 
-.notes-page__btn--save {
-  color: #fff;
-  background: var(--color-accent-html);
+.notes-page__saving {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  min-height: 40px;
+  padding: 0 0.5rem;
 }
 
-.notes-page__btn--save:hover {
-  background: #2563eb;
+.notes-page__saving--active {
+  opacity: 1;
+}
+
+.notes-page__saving-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent-html);
+  animation: notes-saving-pulse 1s ease-in-out infinite;
+}
+
+.notes-page__saving--active.notes-page__saving .notes-page__saving-dot {
+  animation-play-state: running;
+}
+
+@keyframes notes-saving-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
 }
 
 .notes-page__btn--mini {
