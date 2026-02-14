@@ -10,7 +10,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 const publicDir = path.join(root, 'public');
 
-const folders = ['frontend', 'js'];
+// Pastas: documentos (html-css, js) e notas
+const folders = ['documentos', 'notas'];
 for (const folder of folders) {
   const src = path.join(root, '..', folder);
   const dest = path.join(publicDir, folder);
@@ -18,15 +19,6 @@ for (const folder of folders) {
     console.warn(`Pasta não encontrada: ${src}`);
     continue;
   }
-  fs.mkdirSync(dest, { recursive: true });
-  for (const name of fs.readdirSync(src)) {
-    const srcPath = path.join(src, name);
-    const destPath = path.join(dest, name);
-    if (fs.statSync(srcPath).isDirectory()) {
-      fs.cpSync(srcPath, destPath, { recursive: true });
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
+  fs.cpSync(src, dest, { recursive: true });
   console.log(`Copiado: ${folder}/ → public/${folder}/`);
 }

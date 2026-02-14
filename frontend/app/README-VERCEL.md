@@ -11,4 +11,4 @@
 
 ## Build
 
-O script `scripts/copy-docs.js` copia as pastas `frontend/` e `js/` (com os arquivos `.md`) para `public/` antes do build, para que fiquem disponíveis na raiz do deploy.
+O script `scripts/copy-docs.js` copia as pastas `documentos/` (html-css, js) e `notas/` para `public/` antes do build, para que fiquem disponíveis na raiz do deploy.

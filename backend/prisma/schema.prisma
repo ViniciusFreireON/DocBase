@@ -17,12 +17,29 @@ model User {
   @@map("users")
 }
 
+model Folder {
+  id        String   @id @default(uuid())
+  name      String
+  parentId  String?  @map("parent_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  parent   Folder?   @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children Folder[]  @relation("FolderHierarchy")
+  notes    Note[]
+  uploads  Upload[]
+
+  @@map("folders")
+}
+
 model Note {
   id        String   @id @default(uuid())
   title     String   @default("")
   content   String   @default("")
+  folderId  String?  @map("folder_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@map("notes")
 }
@@ -33,7 +50,11 @@ model Upload {
   type       String
   content    String
   size       BigInt   @default(0)
+  folderId   String?  @map("folder_id")
   uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@map("uploads")
 }
+

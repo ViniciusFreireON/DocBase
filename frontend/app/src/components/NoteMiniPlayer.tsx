@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNoteMiniPlayer } from '../contexts/NoteMiniPlayerContext';
-import { getNoteById, saveNote } from '../utils/storage';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchNoteById, updateNote } from '../api/notes';
 import { Icon } from './Icon';
 import {
   MDXEditor,
@@ -32,6 +33,8 @@ const DEFAULT_HEIGHT = 400;
 
 export function NoteMiniPlayer() {
   const { note, closeMiniPlayer } = useNoteMiniPlayer();
+  const { fetchWithAuth } = useAuth();
+  const [currentNote, setCurrentNote] = useState<{ id: string; title: string; content: string } | null>(null);
   const [position, setPosition] = useState({ x: 20, y: 80 });
   const [size, setSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -44,26 +47,38 @@ export function NoteMiniPlayer() {
   const resizeRef = useRef<{ startX: number; startY: number; width: number; height: number } | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const currentNote = note ? getNoteById(note.id) ?? note : null;
-
   useEffect(() => {
-    if (currentNote) {
-      setTitle(currentNote.title || '');
-      setContent(currentNote.content || '');
+    if (note?.id) {
+      fetchNoteById(fetchWithAuth, note.id)
+        .then((n) => {
+          if (n) {
+            setCurrentNote(n);
+            setTitle(n.title || '');
+            setContent(n.content || '');
+          } else {
+            setCurrentNote(null);
+          }
+        })
+        .catch(() => setCurrentNote(null));
+    } else {
+      setCurrentNote(null);
     }
-  }, [currentNote?.id]);
+  }, [note?.id, fetchWithAuth]);
 
-  const persistNote = useCallback(() => {
-    if (!currentNote) return;
+  const persistNote = useCallback(async () => {
+    if (!currentNote?.id) return;
     const md = editorRef.current?.getMarkdown?.();
     const finalContent = typeof md === 'string' ? md : content;
-    saveNote({
-      ...currentNote,
-      title: title.trim() || '(Sem titulo)',
-      content: finalContent.trim(),
-      updatedAt: new Date().toISOString(),
-    });
-  }, [currentNote, title, content]);
+    try {
+      const updated = await updateNote(fetchWithAuth, currentNote.id, {
+        title: title.trim() || '(Sem titulo)',
+        content: finalContent.trim(),
+      });
+      setCurrentNote(updated);
+    } catch {
+      /* ignore save errors in mini player */
+    }
+  }, [currentNote?.id, title, content, fetchWithAuth]);
 
   const scheduleSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);

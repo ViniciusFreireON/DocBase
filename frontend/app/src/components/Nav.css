@@ -5,19 +5,21 @@
   background: transparent;
 }
 
-.nav--with-sidebar .nav__inner {
+/* Com sidebar: a nav não ocupa a área da sidebar, assim o botão de recolher continua clicável */
+.nav--with-sidebar {
   margin-left: 260px;
-  margin-right: auto;
+  width: calc(100% - 260px);
+  transition: margin-left 0.25s ease, width 0.25s ease;
 }
 
-.nav--sidebar-collapsed .nav__inner {
+.nav--sidebar-collapsed {
   margin-left: 72px;
+  width: calc(100% - 72px);
 }
 
 .nav__inner {
   max-width: 1280px;
   margin: 0 auto;
-  transition: margin-left 0.25s ease;
   padding: 0.75rem 1.5rem;
   display: flex;
   align-items: center;
@@ -228,20 +230,16 @@
     display: flex;
   }
 
-  .nav--with-sidebar .nav__inner,
-  .nav--sidebar-collapsed .nav__inner {
+  .nav--with-sidebar,
+  .nav--sidebar-collapsed {
     margin-left: 0;
-    margin-right: 0;
+    width: 100%;
   }
 
   /* Reajusta a nav quando a sidebar está aberta no mobile */
-  .nav--sidebar-mobile-open .nav__inner {
-    margin-left: 260px;
-    margin-right: 0;
-  }
-
-  /* Garante que o botão fechar fique acima da sidebar para ser clicável */
   .nav--sidebar-mobile-open {
+    margin-left: 260px;
+    width: calc(100% - 260px);
     z-index: 120;
   }
 }

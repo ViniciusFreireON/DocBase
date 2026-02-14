@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { getUploads } from '../utils/storage';
-import { getNotes } from '../utils/storage';
+import { fetchNotes } from '../api/notes';
 import { Icon } from './Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import './Sidebar.css';
 
 export function Sidebar() {
-  const { user, logout } = useAuth();
+  const { user, logout, fetchWithAuth } = useAuth();
   const sidebarCtx = useSidebar();
   const collapsed = sidebarCtx?.collapsed ?? false;
   const toggleCollapsed = sidebarCtx?.toggleCollapsed ?? (() => {});
@@ -25,12 +25,14 @@ export function Sidebar() {
         .slice(0, 3)
         .map((u) => ({ id: u.id, name: u.name }))
     );
-    setRecentNotes(
-      getNotes()
-        .slice(0, 3)
-        .map((n) => ({ id: n.id, title: n.title || '(Sem titulo)' }))
-    );
-  }, [location.pathname]);
+    fetchNotes(fetchWithAuth)
+      .then((notes) =>
+        setRecentNotes(
+          notes.slice(0, 3).map((n) => ({ id: n.id, title: n.title || '(Sem titulo)' }))
+        )
+      )
+      .catch(() => setRecentNotes([]));
+  }, [location.pathname, fetchWithAuth]);
 
   useEffect(() => {
     setMobileOpen(false);

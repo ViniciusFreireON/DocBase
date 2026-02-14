@@ -14,9 +14,8 @@ export default defineConfig({
         const serveDocs = (req: any, res: any, next: () => void) => {
           const raw = (req.url ?? '').split('?')[0]
           const decoded = decodeURIComponent(raw)
-          const isFrontend = decoded.startsWith('/frontend/')
-          const isJs = decoded.startsWith('/js/')
-          if (!isFrontend && !isJs) return next()
+          const isDocumentos = decoded.startsWith('/documentos/')
+          if (!isDocumentos) return next()
           const rel = decoded.slice(1)
           const file = path.resolve(server.config.root, '..', rel)
           try {
@@ -37,6 +36,7 @@ export default defineConfig({
     },
   ],
   server: {
+    open: true,
     fs: { allow: ['..'] },
     proxy: {
       '/api': {

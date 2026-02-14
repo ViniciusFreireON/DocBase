@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import type { Note } from '../utils/storage';
+import type { Note } from '../api/notes';
 
 interface NoteMiniPlayerContextValue {
   note: Note | null;

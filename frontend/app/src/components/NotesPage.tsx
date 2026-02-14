@@ -1,13 +1,9 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Icon } from './Icon';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import {
-  getNotes,
-  saveNote,
-  deleteNote,
-  getNoteById,
-  type Note,
-} from '../utils/storage';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchNotes, fetchNoteById, createNote, updateNote, deleteNoteApi, type Note } from '../api/notes';
+import { fetchFolders, createFolder, deleteFolder, type Folder } from '../api/folders';
 import { useNoteMiniPlayer } from '../contexts/NoteMiniPlayerContext';
 import {
   MDXEditor,
@@ -34,30 +30,150 @@ import './NotesPage.css';
 
 type SortBy = 'date' | 'title';
 
-function newNote(): Note {
-  const now = new Date().toISOString();
-  return {
-    id: crypto.randomUUID(),
-    title: '',
-    content: '',
-    createdAt: now,
-    updatedAt: now,
+function flattenFoldersForMove(folders: Folder[]): { id: string; name: string; depth: number }[] {
+  const byParent = new Map<string | null, Folder[]>();
+  folders.forEach((f) => {
+    const key = f.parentId ?? null;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key)!.push(f);
+  });
+  byParent.forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name)));
+  const out: { id: string; name: string; depth: number }[] = [];
+  function walk(parentId: string | null, depth: number) {
+    const list = byParent.get(parentId) ?? [];
+    list.forEach((f) => {
+      out.push({ id: f.id, name: f.name, depth });
+      walk(f.id, depth + 1);
+    });
+  }
+  walk(null, 0);
+  return out;
+}
+
+function NoteMoveDropdown({
+  note,
+  folders,
+  fetchWithAuth,
+  onMoved,
+}: {
+  note: Note;
+  folders: Folder[];
+  fetchWithAuth: (url: string, opts?: RequestInit) => Promise<Response>;
+  onMoved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const flatFolders = useMemo(() => flattenFoldersForMove(folders), [folders]);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    const tid = setTimeout(() => window.addEventListener('click', close), 0);
+    return () => {
+      clearTimeout(tid);
+      window.removeEventListener('click', close);
+    };
+  }, [open]);
+
+  const handleMove = async (targetFolderId: string | null) => {
+    try {
+      await fetchWithAuth(`/api/notes/${note.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderId: targetFolderId }),
+      });
+      setOpen(false);
+      onMoved();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao mover');
+    }
   };
+
+  return (
+    <div className="notes-page__move-wrap">
+      <button
+        type="button"
+        className="notes-page__card-btn"
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); setOpen(!open); }}
+        title="Mover para pasta"
+        aria-label="Mover para pasta"
+        aria-expanded={open}
+      >
+        <Icon name="drive_file_move" className="icon--sm" aria-hidden />
+      </button>
+      {open && (
+        <div className="notes-page__move-dropdown" onClick={(e) => e.stopPropagation()}>
+          <button type="button" onClick={() => handleMove(null)}>Raiz (Todas)</button>
+          {flatFolders.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              className="notes-page__move-dropdown-item"
+              style={{ paddingLeft: 0.5 + f.depth * 0.75 + 'rem' }}
+              onClick={() => handleMove(f.id)}
+            >
+              {f.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function NotesPage() {
+  const { fetchWithAuth } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentFolderId = searchParams.get('folder') ?? 'root';
   const [notes, setNotes] = useState<Note[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('date');
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
   const { openMiniPlayer, closeMiniPlayer, note: miniPlayerNote } = useNoteMiniPlayer();
 
-  const loadNotes = useCallback(() => {
-    setNotes(getNotes());
-  }, []);
+  const loadFolders = useCallback(async () => {
+    try {
+      const list = await fetchFolders(fetchWithAuth);
+      setFolders(list);
+    } catch {
+      setFolders([]);
+    }
+  }, [fetchWithAuth]);
+
+  const loadNotes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const folderParam = currentFolderId === 'root' ? null : currentFolderId;
+      const list = await fetchNotes(fetchWithAuth, folderParam);
+      setNotes(list);
+    } catch {
+      setNotes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchWithAuth, currentFolderId]);
+
+  useEffect(() => {
+    loadFolders();
+  }, [loadFolders]);
 
   useEffect(() => {
     loadNotes();
   }, [loadNotes]);
+
+  const handleDeleteFolder = async (id: string) => {
+    if (!confirm('Excluir esta pasta? As notas dentro dela ficarão na raiz.')) return;
+    try {
+      await deleteFolder(fetchWithAuth, id);
+      if (currentFolderId === id) setSearchParams({});
+      await loadFolders();
+      await loadNotes();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao excluir pasta');
+    }
+  };
 
   const filteredAndSorted = useMemo(() => {
     let list = notes.filter((n) => {
@@ -73,58 +189,263 @@ export function NotesPage() {
     return list;
   }, [notes, busca, sortBy]);
 
+  type FolderWithChildren = Folder & { children: FolderWithChildren[] };
+  const folderTree = useMemo(() => {
+    const list = folders;
+    const byId = new Map<string, FolderWithChildren>();
+    list.forEach((f) => byId.set(f.id, { ...f, children: [] }));
+    const roots: FolderWithChildren[] = [];
+    list.forEach((f) => {
+      const node = byId.get(f.id)!;
+      if (!f.parentId) {
+        roots.push(node);
+      } else {
+        const parent = byId.get(f.parentId);
+        if (parent) parent.children.push(node);
+        else roots.push(node);
+      }
+    });
+    roots.sort((a, b) => a.name.localeCompare(b.name));
+    roots.forEach((r) => r.children.sort((a, b) => a.name.localeCompare(b.name)));
+    return roots;
+  }, [folders]);
+
+  const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(() => new Set());
+  // undefined = formulário fechado, null = criar na raiz, string = criar dentro dessa pasta
+  const [creatingFolderParentId, setCreatingFolderParentId] = useState<string | null | undefined>(undefined);
+
+  const expandPathToFolder = useCallback((folderId: string) => {
+    const path: string[] = [];
+    let id: string | null = folderId;
+    while (id) {
+      path.push(id);
+      const folder = folders.find((f) => f.id === id);
+      id = folder?.parentId ?? null;
+    }
+    setExpandedFolderIds((prev) => {
+      const next = new Set(prev);
+      path.forEach((p) => next.add(p));
+      return next;
+    });
+  }, [folders]);
+
+  useEffect(() => {
+    if (currentFolderId && currentFolderId !== 'root') expandPathToFolder(currentFolderId);
+  }, [currentFolderId, expandPathToFolder]);
+
+  const toggleExpanded = (id: string) => {
+    setExpandedFolderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleCreateFolderWithParent = async (parentId: string | null) => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    const parentToExpand = typeof creatingFolderParentId === 'string' ? creatingFolderParentId : null;
+    try {
+      await createFolder(fetchWithAuth, { name, parentId });
+      setNewFolderName('');
+      setCreatingFolderParentId(undefined);
+      await loadFolders();
+      if (parentToExpand) setExpandedFolderIds((prev) => new Set(prev).add(parentToExpand));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao criar pasta');
+    }
+  };
+
+  const rootFolders = useMemo(() => folders.filter((f) => !f.parentId), [folders]);
+  const currentFolder = useMemo(() => folders.find((f) => f.id === currentFolderId), [folders, currentFolderId]);
+  const currentFolderPath = useMemo(() => {
+    if (!currentFolderId || currentFolderId === 'root') return [];
+    const path: Folder[] = [];
+    let id: string | null = currentFolderId;
+    while (id) {
+      const f = folders.find((x) => x.id === id);
+      if (!f) break;
+      path.unshift(f);
+      id = f.parentId;
+    }
+    return path;
+  }, [folders, currentFolderId]);
+  const isCreatingFolder = creatingFolderParentId !== undefined;
+
+  function FolderTreeItem({
+    node,
+    depth,
+  }: {
+    node: FolderWithChildren;
+    depth: number;
+  }) {
+    const hasChildren = node.children.length > 0;
+    const isExpanded = expandedFolderIds.has(node.id);
+    const isActive = currentFolderId === node.id;
+
+    return (
+      <div className="notes-page__folder-tree-branch" data-depth={depth}>
+        <div className="notes-page__folder-wrap">
+          {hasChildren ? (
+            <button
+              type="button"
+              className="notes-page__folder-expand"
+              onClick={(e) => { e.stopPropagation(); toggleExpanded(node.id); }}
+              aria-label={isExpanded ? 'Recolher' : 'Expandir'}
+              aria-expanded={isExpanded}
+            >
+              <Icon name={isExpanded ? 'expand_more' : 'chevron_right'} className="icon--xs" aria-hidden />
+            </button>
+          ) : (
+            <span className="notes-page__folder-expand-placeholder" />
+          )}
+          <button
+            type="button"
+            className={`notes-page__folder-item ${isActive ? 'notes-page__folder-item--active' : ''}`}
+            onClick={() => setSearchParams({ folder: node.id })}
+          >
+            <Icon name="folder" className="icon--sm" aria-hidden />
+            <span>{node.name}</span>
+            <span className="notes-page__folder-count">{node._count?.notes ?? 0}</span>
+          </button>
+          <button
+            type="button"
+            className="notes-page__folder-subfolder notes-page__folder-subfolder--visible"
+            onClick={(e) => { e.stopPropagation(); setCreatingFolderParentId(node.id); }}
+            title="Nova subpasta aqui"
+            aria-label="Criar subpasta"
+          >
+            <Icon name="create_new_folder" className="icon--xs" aria-hidden />
+          </button>
+          <button
+            type="button"
+            className="notes-page__folder-del"
+            onClick={(e) => { e.stopPropagation(); handleDeleteFolder(node.id); }}
+            title="Excluir pasta"
+            aria-label="Excluir pasta"
+          >
+            <Icon name="delete" className="icon--xs" aria-hidden />
+          </button>
+        </div>
+        {hasChildren && isExpanded && (
+          <div className="notes-page__folder-children">
+            {node.children.map((child) => (
+              <FolderTreeItem key={child.id} node={child} depth={depth + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="notes-page app">
-      <div className="notes-page__inner">
-        <nav className="notes-page__breadcrumb" aria-label="Navegação">
-          <Link to="/">Início</Link>
-          <span className="notes-page__breadcrumb-sep">›</span>
-          <span>Notas</span>
-        </nav>
-        <div className="notes-page__stats">
-          <div className="notes-page__stat">
-            <span className="notes-page__stat-value">{notes.length}</span>
-            <span className="notes-page__stat-label">Total</span>
+      <div className="notes-page__inner notes-page__inner--with-sidebar">
+        <aside className="notes-page__folders">
+          <h3 className="notes-page__folders-title">Pastas</h3>
+          <button
+            type="button"
+            className={`notes-page__folder-item ${currentFolderId === 'root' ? 'notes-page__folder-item--active' : ''}`}
+            onClick={() => setSearchParams({})}
+          >
+            <Icon name="folder" className="icon--sm" aria-hidden />
+            <span>Todas</span>
+          </button>
+          <div className="notes-page__folder-tree">
+            {folderTree.map((node) => (
+              <FolderTreeItem key={node.id} node={node} depth={0} />
+            ))}
           </div>
-        </div>
-        <header className="notes-page__header">
-          <h1 className="notes-page__title">Minhas notas</h1>
-          <p className="notes-page__subtitle">
-            Crie e edite suas notas. Salvas no seu navegador.
-          </p>
-        </header>
-        <div className="notes-page__toolbar">
-          <div className="notes-page__toolbar-filters">
-            <input
-              type="search"
-              placeholder="Buscar nas notas..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="notes-page__search"
-              aria-label="Buscar notas"
-            />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className="notes-page__sort"
-              aria-label="Ordenar por"
+          {isCreatingFolder ? (
+            <div className="notes-page__folder-create">
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder={creatingFolderParentId === null ? 'Nome da pasta (raiz)' : 'Nome da subpasta'}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCreateFolderWithParent(creatingFolderParentId ?? null);
+                  if (e.key === 'Escape') setCreatingFolderParentId(undefined);
+                }}
+              />
+              <button type="button" onClick={() => handleCreateFolderWithParent(creatingFolderParentId ?? null)} disabled={!newFolderName.trim()}>Criar</button>
+              <button type="button" onClick={() => { setCreatingFolderParentId(undefined); setNewFolderName(''); }}>Cancelar</button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="notes-page__folder-new"
+              onClick={() => setCreatingFolderParentId(currentFolderId === 'root' ? null : currentFolderId)}
             >
-              <option value="date">Mais recentes</option>
-              <option value="title">Título (A-Z)</option>
-            </select>
+              <Icon name="create_new_folder" className="icon--sm" aria-hidden /> Nova pasta
+            </button>
+          )}
+        </aside>
+        <div className="notes-page__main">
+          <nav className="notes-page__breadcrumb" aria-label="Navegação">
+            <Link to="/">Início</Link>
+            <span className="notes-page__breadcrumb-sep">›</span>
+            <Link to="/notas">Notas</Link>
+            {currentFolderPath.map((f) => (
+              <span key={f.id}>
+                <span className="notes-page__breadcrumb-sep">›</span>
+                <Link to={`/notas?folder=${f.id}`}>{f.name}</Link>
+              </span>
+            ))}
+          </nav>
+          <div className="notes-page__stats">
+            <div className="notes-page__stat">
+              <span className="notes-page__stat-value">{notes.length}</span>
+              <span className="notes-page__stat-label">Total</span>
+            </div>
           </div>
-          <div className="notes-page__toolbar-actions">
-            <span className="notes-page__count" title="Total de notas">
-              {notes.length} notas
-            </span>
-            <Link to="/notas/nova" className="notes-page__btn-new">
-              <Icon name="add" className="icon--sm" aria-hidden /> Nova nota
-            </Link>
+          <header className="notes-page__header">
+            <h1 className="notes-page__title">{currentFolder ? currentFolder.name : 'Minhas notas'}</h1>
+            <p className="notes-page__subtitle">
+              {currentFolder
+                ? `Notas nesta pasta`
+                : 'Crie e edite suas notas. Organize em pastas.'}
+            </p>
+          </header>
+          <div className="notes-page__toolbar">
+            <div className="notes-page__toolbar-filters">
+              <input
+                type="search"
+                placeholder="Buscar nas notas..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="notes-page__search"
+                aria-label="Buscar notas"
+              />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortBy)}
+                className="notes-page__sort"
+                aria-label="Ordenar por"
+              >
+                <option value="date">Mais recentes</option>
+                <option value="title">Título (A-Z)</option>
+              </select>
+            </div>
+            <div className="notes-page__toolbar-actions">
+              <span className="notes-page__count" title="Total de notas">
+                {notes.length} notas
+              </span>
+              <Link
+                to={currentFolderId === 'root' || !currentFolderId ? '/notas/nova' : `/notas/nova?folder=${currentFolderId}`}
+                className="notes-page__btn-new"
+              >
+                <Icon name="add" className="icon--sm" aria-hidden /> Nova nota
+              </Link>
+            </div>
           </div>
-        </div>
 
-        <section className="notes-page__section">
-          {filteredAndSorted.length === 0 ? (
+          <section className="notes-page__section">
+          {loading ? (
+            <p className="notes-page__empty">Carregando notas...</p>
+          ) : filteredAndSorted.length === 0 ? (
             <p className="notes-page__empty">
               {notes.length === 0 ? 'Nenhuma nota ainda. Crie a primeira!' : 'Nenhuma nota corresponde à busca.'}
             </p>
@@ -151,6 +472,12 @@ export function NotesPage() {
                     </span>
                   </Link>
                   <div className="notes-page__card-actions" onClick={(e) => e.preventDefault()}>
+                    <NoteMoveDropdown
+                      note={n}
+                      folders={folders}
+                      fetchWithAuth={fetchWithAuth}
+                      onMoved={loadNotes}
+                    />
                     <button
                       type="button"
                       className="notes-page__card-btn"
@@ -166,12 +493,16 @@ export function NotesPage() {
                     <button
                       type="button"
                       className="notes-page__card-btn notes-page__card-btn--del"
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
                         if (confirm('Excluir esta nota?')) {
-                          deleteNote(n.id);
-                          if (miniPlayerNote?.id === n.id) closeMiniPlayer();
-                          setNotes(getNotes());
+                          try {
+                            await deleteNoteApi(fetchWithAuth, n.id);
+                            if (miniPlayerNote?.id === n.id) closeMiniPlayer();
+                            await loadNotes();
+                          } catch (err) {
+                            alert(err instanceof Error ? err.message : 'Erro ao excluir');
+                          }
                         }
                       }}
                       title="Excluir nota"
@@ -184,7 +515,8 @@ export function NotesPage() {
               ))}
             </div>
           )}
-        </section>
+          </section>
+        </div>
       </div>
     </div>
   );
@@ -195,10 +527,15 @@ type SavingStatus = 'idle' | 'pending' | 'saving' | 'saved';
 export function NoteEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const folderParam = searchParams.get('folder');
+  const folderIdFromUrl = folderParam && folderParam !== 'root' ? folderParam : null;
+  const { fetchWithAuth } = useAuth();
   const { openMiniPlayer } = useNoteMiniPlayer();
   const [note, setNote] = useState<Note | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
   const [savingStatus, setSavingStatus] = useState<SavingStatus>('idle');
   const editorRef = useRef<MDXEditorMethods | null>(null);
   const isFirstRender = useRef(true);
@@ -208,38 +545,51 @@ export function NoteEditorPage() {
 
   useEffect(() => {
     if (isNew) {
-      setNote(newNote());
+      setNote({ id: '', title: '', content: '', createdAt: '', updatedAt: '' });
       setTitle('');
       setContent('');
+      setLoading(false);
     } else if (id) {
-      const found = getNoteById(id);
-      setNote(found ?? null);
-      setTitle(found?.title ?? '');
-      setContent(found?.content ?? '');
+      setLoading(true);
+      fetchNoteById(fetchWithAuth, id)
+        .then((found) => {
+          setNote(found ?? null);
+          setTitle(found?.title ?? '');
+          setContent(found?.content ?? '');
+        })
+        .catch(() => setNote(null))
+        .finally(() => setLoading(false));
     }
     isFirstRender.current = true;
     lastSaved.current = null;
-  }, [id, isNew]);
+  }, [id, isNew, fetchWithAuth]);
 
-  const persistNote = useCallback(() => {
+  const persistNote = useCallback(async () => {
     if (!note) return null;
     const md = editorRef.current?.getMarkdown?.();
     const finalContent = typeof md === 'string' ? md : content;
-    const updated: Note = {
-      ...note,
-      title: title.trim() || '(Sem titulo)',
-      content: finalContent.trim(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveNote(updated);
-    setNote(updated);
-    setTitle(updated.title);
-    setContent(updated.content);
-    if (isNew) {
-      navigate(`/notas/${updated.id}`, { replace: true });
+    const titleVal = title.trim() || '(Sem titulo)';
+    const contentVal = finalContent.trim();
+    try {
+      let updated: Note;
+      if (isNew || !note.id) {
+        updated = await createNote(fetchWithAuth, { title: titleVal, content: contentVal, folderId: folderIdFromUrl });
+        setNote(updated);
+        setTitle(updated.title);
+        setContent(updated.content);
+        navigate(`/notas/${updated.id}`, { replace: true });
+      } else {
+        updated = await updateNote(fetchWithAuth, note.id, { title: titleVal, content: contentVal });
+        setNote(updated);
+        setTitle(updated.title);
+        setContent(updated.content);
+      }
+      return updated;
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao salvar');
+      return null;
     }
-    return updated;
-  }, [note, title, content, isNew, navigate]);
+  }, [note, title, content, isNew, navigate, fetchWithAuth, folderIdFromUrl]);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -253,12 +603,13 @@ export function NoteEditorPage() {
     setSavingStatus('pending');
     const t = setTimeout(() => {
       setSavingStatus('saving');
-      const updated = persistNote();
-      if (updated) {
-        lastSaved.current = { title: updated.title, content: updated.content };
-      }
-      setSavingStatus('saved');
-      setTimeout(() => setSavingStatus('idle'), 1200);
+      persistNote().then((updated) => {
+        if (updated) {
+          lastSaved.current = { title: updated.title, content: updated.content };
+        }
+        setSavingStatus('saved');
+        setTimeout(() => setSavingStatus('idle'), 1200);
+      });
     }, 600);
     return () => clearTimeout(t);
   }, [title, content, persistNote]);
@@ -274,11 +625,29 @@ export function NoteEditorPage() {
     return () => window.removeEventListener('keydown', handler);
   }, [persistNote]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!note || !confirm('Excluir esta nota?')) return;
-    deleteNote(note.id);
-    navigate('/notas');
+    if (isNew || !note.id) {
+      navigate('/notas');
+      return;
+    }
+    try {
+      await deleteNoteApi(fetchWithAuth, note.id);
+      navigate('/notas');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Erro ao excluir');
+    }
   };
+
+  if (loading && !isNew) {
+    return (
+      <div className="notes-page">
+        <div className="notes-page__inner">
+          <p>Carregando nota...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!note && !isNew) {
     return (
@@ -316,8 +685,7 @@ export function NoteEditorPage() {
                   type="button"
                   className="notes-page__btn notes-page__btn--mini"
                   onClick={() => {
-                    const n = getNoteById(note.id);
-                    if (n) openMiniPlayer(n);
+                    if (note) openMiniPlayer(note);
                   }}
                   title="Abrir mini player"
                 >
