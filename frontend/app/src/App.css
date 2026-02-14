@@ -2,10 +2,13 @@
   margin-left: 260px;
   min-height: 100vh;
   transition: margin-left 0.25s ease;
+  width: calc(100% - 260px);
+  max-width: 100%;
 }
 
 .sidebar--collapsed ~ .main-with-sidebar {
   margin-left: 72px;
+  width: calc(100% - 72px);
 }
 
 .app {

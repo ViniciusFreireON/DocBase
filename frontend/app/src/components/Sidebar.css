@@ -4,17 +4,19 @@
   left: 0;
   z-index: 90;
   width: 260px;
+  min-width: 260px;
   height: 100vh;
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  transition: width 0.25s ease, transform 0.25s ease;
+  transition: width 0.25s ease, min-width 0.25s ease, transform 0.25s ease;
   overflow: hidden;
 }
 
 .sidebar--collapsed {
   width: 72px;
+  min-width: 72px;
 }
 
 .sidebar__inner {
@@ -22,17 +24,28 @@
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
 }
 
 .sidebar__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem;
+  padding: 1rem 1rem 1.25rem;
   min-height: 60px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
   gap: 0.75rem;
+}
+
+.sidebar--collapsed .sidebar__header {
+  justify-content: center;
+  padding: 1rem 0.5rem;
+}
+
+.sidebar--collapsed .sidebar__logo {
+  display: none;
 }
 
 .sidebar__header-actions {
@@ -56,10 +69,6 @@
   color: var(--color-accent-html);
 }
 
-.sidebar--collapsed .sidebar__logo {
-  font-size: 1rem;
-}
-
 .sidebar__toggle {
   width: 40px;
   height: 40px;
@@ -73,17 +82,13 @@
   border-radius: var(--radius-md);
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .sidebar__toggle:hover {
   background: var(--color-surface-hover);
   color: var(--color-text);
   border-color: var(--color-border-hover);
-}
-
-.sidebar__toggle:active {
-  transform: scale(0.96);
 }
 
 .sidebar__toggle--mobile {
@@ -128,10 +133,24 @@
   font-weight: 600;
 }
 
+.sidebar--collapsed .sidebar__header {
+  justify-content: center;
+}
+
 .sidebar__nav {
   flex: 1;
   padding: 1rem 0.75rem;
   overflow-y: auto;
+  min-width: 0;
+}
+
+.sidebar--collapsed .sidebar__nav {
+  padding: 1rem 0.5rem;
+}
+
+.sidebar--collapsed .sidebar__link {
+  justify-content: center;
+  padding: 0.75rem;
 }
 
 .sidebar__list {
@@ -232,6 +251,16 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.sidebar--collapsed .sidebar__footer {
+  padding: 1rem 0.5rem;
+}
+
+.sidebar--collapsed .sidebar__footer .sidebar__link {
+  justify-content: center;
+  padding: 0.75rem;
 }
 
 .sidebar__footer .sidebar__link {
@@ -310,6 +339,8 @@
 
   .main-with-sidebar {
     margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
     padding-top: 60px !important;
   }
 }

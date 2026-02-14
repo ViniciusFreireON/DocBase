@@ -59,6 +59,33 @@
   color: var(--color-accent-html);
 }
 
+/* Paleta própria para pastas das Notas */
+.notes-page {
+  --notes-folder-front-end: #0d9488;
+  --notes-folder-javascript: #ea580c;
+  --notes-folder-slides: #16a34a;
+  --notes-folder-readme: #7c3aed;
+  --notes-folder-relatorio: #db2777;
+}
+
+/* Cores por categoria na sidebar */
+.notes-page__folder-item[data-folder="front-end"] { color: var(--notes-folder-front-end); }
+.notes-page__folder-item[data-folder="front-end"]:hover { background: rgba(13, 148, 136, 0.14); }
+.notes-page__folder-item[data-folder="javascript"] { color: var(--notes-folder-javascript); }
+.notes-page__folder-item[data-folder="javascript"]:hover { background: rgba(234, 88, 12, 0.14); }
+.notes-page__folder-item[data-folder="slides"] { color: var(--notes-folder-slides); }
+.notes-page__folder-item[data-folder="slides"]:hover { background: rgba(22, 163, 74, 0.14); }
+.notes-page__folder-item[data-folder="readme"] { color: var(--notes-folder-readme); }
+.notes-page__folder-item[data-folder="readme"]:hover { background: rgba(124, 58, 237, 0.14); }
+.notes-page__folder-item[data-folder="relatorio"] { color: var(--notes-folder-relatorio); }
+.notes-page__folder-item[data-folder="relatorio"]:hover { background: rgba(219, 39, 119, 0.14); }
+
+.notes-page__folder-item--active[data-folder="front-end"] { background: rgba(13, 148, 136, 0.22); color: var(--notes-folder-front-end); }
+.notes-page__folder-item--active[data-folder="javascript"] { background: rgba(234, 88, 12, 0.22); color: var(--notes-folder-javascript); }
+.notes-page__folder-item--active[data-folder="slides"] { background: rgba(22, 163, 74, 0.22); color: var(--notes-folder-slides); }
+.notes-page__folder-item--active[data-folder="readme"] { background: rgba(124, 58, 237, 0.22); color: var(--notes-folder-readme); }
+.notes-page__folder-item--active[data-folder="relatorio"] { background: rgba(219, 39, 119, 0.22); color: var(--notes-folder-relatorio); }
+
 .notes-page__folder-tree {
   margin-bottom: 0.25rem;
 }
@@ -481,6 +508,49 @@
   background: rgba(59, 130, 246, 0.18);
   color: var(--color-accent-html);
   flex-shrink: 0;
+}
+
+.notes-page__card-badge--folder {
+  background: rgba(156, 163, 175, 0.25);
+  color: var(--color-text-muted);
+}
+
+/* Cores por categoria nos cards de pasta (paleta Notas) */
+.notes-page__card--folder[data-folder="front-end"] {
+  border-left: 4px solid var(--notes-folder-front-end);
+}
+.notes-page__card--folder[data-folder="front-end"] .notes-page__card-folder-icon { color: var(--notes-folder-front-end); }
+.notes-page__card--folder[data-folder="front-end"] .notes-page__card-badge--folder { background: rgba(13, 148, 136, 0.22); color: var(--notes-folder-front-end); }
+
+.notes-page__card--folder[data-folder="javascript"] {
+  border-left: 4px solid var(--notes-folder-javascript);
+}
+.notes-page__card--folder[data-folder="javascript"] .notes-page__card-folder-icon { color: var(--notes-folder-javascript); }
+.notes-page__card--folder[data-folder="javascript"] .notes-page__card-badge--folder { background: rgba(234, 88, 12, 0.22); color: var(--notes-folder-javascript); }
+
+.notes-page__card--folder[data-folder="slides"] {
+  border-left: 4px solid var(--notes-folder-slides);
+}
+.notes-page__card--folder[data-folder="slides"] .notes-page__card-folder-icon { color: var(--notes-folder-slides); }
+.notes-page__card--folder[data-folder="slides"] .notes-page__card-badge--folder { background: rgba(22, 163, 74, 0.22); color: var(--notes-folder-slides); }
+
+.notes-page__card--folder[data-folder="readme"] {
+  border-left: 4px solid var(--notes-folder-readme);
+}
+.notes-page__card--folder[data-folder="readme"] .notes-page__card-folder-icon { color: var(--notes-folder-readme); }
+.notes-page__card--folder[data-folder="readme"] .notes-page__card-badge--folder { background: rgba(124, 58, 237, 0.22); color: var(--notes-folder-readme); }
+
+.notes-page__card--folder[data-folder="relatorio"] {
+  border-left: 4px solid var(--notes-folder-relatorio);
+}
+.notes-page__card--folder[data-folder="relatorio"] .notes-page__card-folder-icon { color: var(--notes-folder-relatorio); }
+.notes-page__card--folder[data-folder="relatorio"] .notes-page__card-badge--folder { background: rgba(219, 39, 119, 0.22); color: var(--notes-folder-relatorio); }
+
+.notes-page__card-folder-icon {
+  font-size: 1rem;
+  margin-right: 0.35rem;
+  vertical-align: -0.2em;
+  color: var(--color-text-muted);
 }
 
 .notes-page__card-preview {

@@ -1,14 +1,21 @@
-import type { DocumentItem } from '../types/document';
+export type DocType = 'html-css' | 'js';
+export type DocCategory = 'slide' | 'readme' | 'relatorio';
 
-// Em produção os .md ficam em public (raiz do deploy)
+export interface SeedDocument {
+  type: DocType;
+  category: DocCategory;
+  title: string;
+  desc: string;
+  path: string;
+}
+
 const basePath = '';
 
 function path(p: string): string {
   return basePath + p;
 }
 
-export const documents: DocumentItem[] = [
-  // ——— Front-end (HTML/CSS) ———
+export const seedDocuments: SeedDocument[] = [
   { type: 'html-css', category: 'slide', title: 'Conteúdo', desc: 'HTML, web, marcação.', path: path('documentos/html-css/slides-conteudo-corrigido.md') },
   { type: 'html-css', category: 'slide', title: 'Listas e formulários', desc: 'Listas e formulários.', path: path('documentos/html-css/slides-listas-formularios-corrigido.md') },
   { type: 'html-css', category: 'slide', title: 'Estrutura de projeto', desc: 'Pastas e arquivos.', path: path('documentos/html-css/slides-estrutura-projeto-corrigido.md') },
@@ -27,8 +34,6 @@ export const documents: DocumentItem[] = [
   { type: 'html-css', category: 'readme', title: 'README flexbox', desc: 'Resumo das correções: flexbox.', path: path('documentos/html-css/README-slides-flexbox.md') },
   { type: 'html-css', category: 'readme', title: 'README landing page', desc: 'Resumo das correções: landing page.', path: path('documentos/html-css/README-slides-landing-page.md') },
   { type: 'html-css', category: 'relatorio', title: 'Relatório geral', desc: 'Todas as correções e melhorias nos 8 documentos.', path: path('documentos/html-css/RELATORIO.md') },
-
-  // ——— JavaScript ———
   { type: 'js', category: 'slide', title: 'Introdução ao JavaScript', desc: 'Variáveis, tipos, funções, DOM, eventos.', path: path('documentos/js/slides-javascript-introducao-corrigido.md') },
   { type: 'js', category: 'slide', title: 'Decisão (if)', desc: 'if, else, operadores, validação.', path: path('documentos/js/slides-javascript-decisao-if-corrigido.md') },
   { type: 'js', category: 'slide', title: 'Repetição (laços)', desc: 'while, do while.', path: path('documentos/js/slides-javascript-repeticao-loops-corrigido.md') },

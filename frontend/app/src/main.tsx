@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { DocumentsProvider } from './contexts/DocumentsContext'
 import { SearchProvider } from './contexts/SearchContext'
 import { SidebarProvider } from './contexts/SidebarContext'
 import { NoteMiniPlayerProvider } from './contexts/NoteMiniPlayerContext'
@@ -13,11 +14,13 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AuthProvider>
         <SidebarProvider>
-        <SearchProvider>
-          <NoteMiniPlayerProvider>
-            <App />
-          </NoteMiniPlayerProvider>
-        </SearchProvider>
+          <DocumentsProvider>
+            <SearchProvider>
+              <NoteMiniPlayerProvider>
+                <App />
+              </NoteMiniPlayerProvider>
+            </SearchProvider>
+          </DocumentsProvider>
         </SidebarProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { documents } from '../data/documents';
+import { useDocuments } from './DocumentsContext';
 import { SearchModal } from '../components/SearchModal';
 
 interface SearchContextValue {
@@ -12,6 +12,7 @@ const SearchContext = createContext<SearchContextValue | null>(null);
 
 export function SearchProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const { documents } = useDocuments();
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
 

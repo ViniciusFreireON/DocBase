@@ -8,9 +8,9 @@ import { Header } from './Header';
 import { Drawer } from './Drawer';
 import { extractToc } from '../utils/toc';
 import { useSearch } from '../contexts/SearchContext';
+import { useDocuments } from '../contexts/DocumentsContext';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
-import { documents } from '../data/documents';
 import { exportToPdf } from '../utils/exportPdf';
 import { Icon } from './Icon';
 import './ContentViewer.css';
@@ -110,6 +110,7 @@ export function ContentViewer() {
   const [openCopySectionId, setOpenCopySectionId] = useState<string | null>(null);
   const [indexOpen, setIndexOpen] = useState(false);
 
+  const { documents } = useDocuments();
   const { addViewed } = useRecentlyViewed(documents);
   const { open: openSearch } = useSearch();
   const filename = path ? path.split('/').pop() || 'documento.md' : 'documento.md';

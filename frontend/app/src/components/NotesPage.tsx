@@ -30,6 +30,18 @@ import './NotesPage.css';
 
 type SortBy = 'date' | 'title';
 
+/** Slug para cores por categoria (igual à página de Documentos) */
+function getFolderSlug(name: string): string {
+  const map: Record<string, string> = {
+    'Front-end': 'front-end',
+    'JavaScript': 'javascript',
+    'Slides': 'slides',
+    'README': 'readme',
+    'Relatório de correção': 'relatorio',
+  };
+  return map[name] ?? '';
+}
+
 function flattenFoldersForMove(folders: Folder[]): { id: string; name: string; depth: number }[] {
   const byParent = new Map<string | null, Folder[]>();
   folders.forEach((f) => {
@@ -259,6 +271,10 @@ export function NotesPage() {
 
   const rootFolders = useMemo(() => folders.filter((f) => !f.parentId), [folders]);
   const currentFolder = useMemo(() => folders.find((f) => f.id === currentFolderId), [folders, currentFolderId]);
+  const foldersInCurrentView = useMemo(() => {
+    if (currentFolderId === 'root' || !currentFolderId) return rootFolders;
+    return folders.filter((f) => f.parentId === currentFolderId).sort((a, b) => a.name.localeCompare(b.name));
+  }, [currentFolderId, folders, rootFolders]);
   const currentFolderPath = useMemo(() => {
     if (!currentFolderId || currentFolderId === 'root') return [];
     const path: Folder[] = [];
@@ -303,6 +319,7 @@ export function NotesPage() {
           <button
             type="button"
             className={`notes-page__folder-item ${isActive ? 'notes-page__folder-item--active' : ''}`}
+            data-folder={getFolderSlug(node.name) || undefined}
             onClick={() => setSearchParams({ folder: node.id })}
           >
             <Icon name="folder" className="icon--sm" aria-hidden />
@@ -445,12 +462,53 @@ export function NotesPage() {
           <section className="notes-page__section">
           {loading ? (
             <p className="notes-page__empty">Carregando notas...</p>
-          ) : filteredAndSorted.length === 0 ? (
+          ) : foldersInCurrentView.length === 0 && filteredAndSorted.length === 0 ? (
             <p className="notes-page__empty">
-              {notes.length === 0 ? 'Nenhuma nota ainda. Crie a primeira!' : 'Nenhuma nota corresponde à busca.'}
+              {notes.length === 0 && foldersInCurrentView.length === 0
+                ? 'Nenhuma nota nem pasta ainda. Crie a primeira!'
+                : 'Nenhuma nota corresponde à busca.'}
             </p>
           ) : (
             <div className="notes-page__grid">
+              {foldersInCurrentView.map((f) => (
+                <div key={f.id} className="notes-page__card notes-page__card--folder" data-folder={getFolderSlug(f.name) || undefined}>
+                  <Link to={`/notas?folder=${f.id}`} className="notes-page__card-link">
+                    <div className="notes-page__card-header">
+                      <h3 className="notes-page__card-title">
+                        <Icon name="folder" className="notes-page__card-folder-icon" aria-hidden />
+                        {f.name}
+                      </h3>
+                      <span className="notes-page__card-badge notes-page__card-badge--folder">Pasta</span>
+                    </div>
+                    <p className="notes-page__card-preview">
+                      {(f._count?.notes ?? 0) === 0
+                        ? 'Nenhuma nota'
+                        : `${f._count?.notes ?? 0} ${(f._count?.notes ?? 0) === 1 ? 'nota' : 'notas'}`}
+                    </p>
+                    <span className="notes-page__card-meta">Pasta</span>
+                  </Link>
+                  <div className="notes-page__card-actions" onClick={(e) => e.preventDefault()}>
+                    <button
+                      type="button"
+                      className="notes-page__card-btn notes-page__card-btn--del"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (confirm('Excluir esta pasta? As notas dentro dela ficarão na raiz.')) {
+                          try {
+                            await handleDeleteFolder(f.id);
+                          } catch {
+                            // handleDeleteFolder already shows alert
+                          }
+                        }
+                      }}
+                      title="Excluir pasta"
+                      aria-label="Excluir pasta"
+                    >
+                      <Icon name="delete" className="icon--sm" aria-hidden />
+                    </button>
+                  </div>
+                </div>
+              ))}
               {filteredAndSorted.map((n) => (
                 <div key={n.id} className="notes-page__card">
                   <Link to={`/notas/${n.id}`} className="notes-page__card-link">

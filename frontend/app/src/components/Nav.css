@@ -9,12 +9,14 @@
 .nav--with-sidebar {
   margin-left: 260px;
   width: calc(100% - 260px);
+  max-width: calc(100vw - 260px);
   transition: margin-left 0.25s ease, width 0.25s ease;
 }
 
 .nav--sidebar-collapsed {
   margin-left: 72px;
   width: calc(100% - 72px);
+  max-width: calc(100vw - 72px);
 }
 
 .nav__inner {

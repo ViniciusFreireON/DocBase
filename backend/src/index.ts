@@ -241,6 +241,27 @@ app.delete('/api/uploads/:id', authMiddleware, async (req, res) => {
   res.status(204).send();
 });
 
+// Rotas protegidas - Document folders e Documents
+app.get('/api/document-folders', authMiddleware, async (_req, res) => {
+  const folders = await prisma.documentFolder.findMany({
+    orderBy: { name: 'asc' },
+    include: { _count: { select: { documents: true, children: true } } },
+  });
+  res.json(folders);
+});
+
+app.get('/api/documents', authMiddleware, async (req, res) => {
+  const folderId = req.query.folderId as string | undefined;
+  const where = folderId === 'root' || folderId === '' || !folderId
+    ? {}
+    : { folderId };
+  const documents = await prisma.document.findMany({
+    where,
+    orderBy: { title: 'asc' },
+  });
+  res.json(documents);
+});
+
 // Handler global para erros não tratados (ex.: falha de conexão com o banco)
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const message = err instanceof Error ? err.message : 'Erro interno do servidor';

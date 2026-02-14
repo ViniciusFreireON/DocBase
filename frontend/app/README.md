@@ -11,8 +11,8 @@ Interface para organizar os documentos de slides por **tipo** (HTML e CSS / Java
 ## Estrutura do código
 
 - **`src/types/document.ts`** — Tipos TypeScript (DocumentType, DocumentCategory, DocumentItem).
-- **`src/data/documents.ts`** — Lista de documentos e caminhos.
-- **`src/components/`** — Header, Filters, DocumentCard, Section (cada um com seu `.css`).
+- **`src/contexts/DocumentsContext.tsx`** — Busca a lista de documentos na API (gravados no banco).
+- **`src/components/`** — Header, Filters, DocumentCard, Section, DocsPage (cada um com seu `.css`).
 - **`src/App.tsx`** + **`src/App.css`** — Layout principal e estado dos filtros.
 - **`src/index.css`** — Variáveis CSS globais e reset.
 
